@@ -3,39 +3,35 @@
 #include <stdlib.h>
 #include <unistd.h>
 
-#include "import.h"
-#include "export.h"
+#include "import/import.h"
+#include "export/export.h"
 
 int main(int argc, char *argv[])
 {
-    bool isCaseInsensitive = false;
-
     int opt;
 
-    enum { CHARACTER_MODE, WORD_MODE, LINE_MODE } mode = CHARACTER_MODE;
+    /* Options:
+     *  File, the path to the file being used.
+     *  Commands:
+     *      -p Print.
+     *      -c Make transaction 
+    */
+    while((opt = getopt(argc, argv, "f:")) != -1) {
 
-    // Read this to understand how this is implemented.
-    //https://www.tutorialspoint.com/getopt-function-in-c-to-parse-command-line-arguments
-    while((opt = getopt(argc, argv, "ilw")) != -1) {
         switch (opt) {
-        case 'i': 
-            isCaseInsensitive = true; 
-            break;
-        case 'l': 
-            mode = LINE_MODE; 
-            break;
-        case 'w': 
-            mode = WORD_MODE; 
-            break;
+        case 'f':
+            printf("%s\n", optarg);
+        break;
         default:
             fprintf(stderr, "Usage: %s [-ilw] [file...]\n", argv[0]);
             exit(EXIT_FAILURE);
         }
+
     }
 
     // Now optind (declared extern int by <unistd.h>) is the index of the first non-option argument.
     // If it is >= argc, there were no non-option arguments.
+    printf("The file %s", argv[optind]);
 
-    // ...
     return 0;
 }
