@@ -1,6 +1,6 @@
 # tool macros
 CC := gcc
-CCFLAGS := # FILL: compile flags
+CCFLAGS := -Werror# FILL: compile flags
 DBGFLAGS := -g
 CCOBJFLAGS := $(CCFLAGS) -c
 

@@ -1,6 +1,22 @@
 [x] Create Makefile
+[x] Chose what to use to persist data. (users details...)
+[_] xml.c to write/read xml user data.
+
 [_] Start the entry point to the program (taking arguments and stuff)
 [_] Add a license
-[_] Chose what to use to persist data. (users details...)
-[_] Implement all structures needed.
-[_] Create man page.
+
+REQUIREMENTS:
+I want to be able to have accounts with a balance:
+    - Day to day account with $1000, for example;
+    - Saving's account with $5000, for example;
+
+I want to be able to register expenditures.
+    - Register a transaction;
+        - e.g. I have spent $X from Day-To-Day account;
+    - I want to be able to see a history of my transactions;
+
+
+Account
+    - Owner
+    - Balance
+    - Transactions

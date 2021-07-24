@@ -2,36 +2,71 @@
 #include <stdbool.h>
 #include <stdlib.h>
 #include <unistd.h>
+#include <string.h>
+#include <assert.h>
 
-#include "import/import.h"
-#include "export/export.h"
+#include "fin/schema.h"
+#include "fin/xml.h"
 
-int main(int argc, char *argv[])
+char acc_name[7] = "savings";
+
+void
+print_test_result(char *test_name, bool passed)
 {
-    int opt;
+    printf("Test: %s : [%s]\n", 
+            test_name, 
+            passed == 1 ? "PASS" : "FAIL");
+}
 
-    /* Options:
-     *  File, the path to the file being used.
-     *  Commands:
-     *      -p Print.
-     *      -c Make transaction 
-    */
-    while((opt = getopt(argc, argv, "f:")) != -1) {
+void 
+test_create_account()
+{
+    account_t tmp_account;
 
-        switch (opt) {
-        case 'f':
-            printf("%s\n", optarg);
-        break;
-        default:
-            fprintf(stderr, "Usage: %s [-ilw] [file...]\n", argv[0]);
-            exit(EXIT_FAILURE);
-        }
+    strcpy(tmp_account.name, acc_name);
+    tmp_account.balance = 200.0;
 
-    }
+    save_account(&tmp_account);
 
-    // Now optind (declared extern int by <unistd.h>) is the index of the first non-option argument.
-    // If it is >= argc, there were no non-option arguments.
-    printf("The file %s", argv[optind]);
+}
+
+void 
+test_load_account()
+{
+    account_t usr_account;
+    usr_account = load_account(acc_name);
+
+    print_test_result("test_create_load_account", 
+           strcmp(usr_account.name, acc_name) == 0);
+}
+
+void
+test_register_transaction()
+{
+    // Create transaction and add it to the account
+    transaction_t trans;
+    strcpy(trans.from, "day_to_day");
+    strcpy(trans.to, "landlord");
+    trans.amount = 100.0;
+}
+
+void 
+run_tests() 
+{
+    printf("BEGIN TESTING;\n");
+
+    test_create_account();
+    test_load_account();
+    test_register_transaction();
+
+    printf("END TESTING;\n");
+}
+
+int
+main(int argc, char *argv[])
+{
+
+    run_tests();
 
     return 0;
 }
