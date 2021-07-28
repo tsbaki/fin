@@ -1,72 +1,45 @@
 #include <stdio.h>
-#include <stdbool.h>
-#include <stdlib.h>
 #include <unistd.h>
-#include <string.h>
-#include <assert.h>
+#include <getopt.h>
 
 #include "fin/schema.h"
 #include "fin/xml.h"
 
-char acc_name[7] = "savings";
-
-void
-print_test_result(char *test_name, bool passed)
+void print_help()
 {
-    printf("Test: %s : [%s]\n", 
-            test_name, 
-            passed == 1 ? "PASS" : "FAIL");
+    printf("Usage: fin [OPTIONS]... [FILE]...\n");
+    printf("\t-p, --print-accounts \tprint the accounts in file\n");
+
+
+    printf("\t-h, --help \tshow this help message\n\n");
+    printf("Author: Andre Brasil\n");
+    printf("Report bugs to <brasil.a@protonmail.com>\n");
 }
 
-void 
-test_create_account()
+int main(int argc, char **argv)
 {
-    account_t tmp_account;
+    int opt;
+    char *path_to_file = NULL;
 
-    strcpy(tmp_account.name, acc_name);
-    tmp_account.balance = 200.0;
-
-    save_account(&tmp_account);
-
-}
-
-void 
-test_load_account()
-{
-    account_t usr_account;
-    usr_account = load_account(acc_name);
-
-    print_test_result("test_create_load_account", 
-           strcmp(usr_account.name, acc_name) == 0);
-}
-
-void
-test_register_transaction()
-{
-    // Create transaction and add it to the account
-    transaction_t trans;
-    strcpy(trans.from, "day_to_day");
-    strcpy(trans.to, "landlord");
-    trans.amount = 100.0;
-}
-
-void 
-run_tests() 
-{
-    printf("BEGIN TESTING;\n");
-
-    test_create_account();
-    test_load_account();
-    test_register_transaction();
-
-    printf("END TESTING;\n");
-}
-
-int
-main(int argc, char *argv[])
-{
-
-    run_tests();
+    while((opt = getopt(argc, argv, "f:ph")) != -1)
+    {
+        switch(opt)
+        {
+            case 'f':
+                path_to_file = optarg;
+                break;
+            case 'p':
+                print_account_names(path_to_file);
+                break;
+            case 'h':
+                print_help();
+                break;
+            case '?':
+                //printf("Unknown option: %c\n", optopt);
+                printf("Use -h to print the help page.\n");
+                break;
+        }
+    }
 
     return 0;
 }

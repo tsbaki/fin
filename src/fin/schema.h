@@ -5,7 +5,6 @@
 #define SCHEMA_H
 typedef struct transaction_t
 {
-    char from[100];
     char to[100];
     double amount;
 } transaction_t;

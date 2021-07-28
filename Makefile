@@ -1,7 +1,7 @@
 # tool macros
 CC := gcc
-CCFLAGS := -Werror# FILL: compile flags
-DBGFLAGS := -g
+CCFLAGS := `xml2-config --cflags --libs` 
+DBGFLAGS := -g -Wextra
 CCOBJFLAGS := $(CCFLAGS) -c
 
 # path macros
@@ -44,7 +44,7 @@ $(DBG_PATH)/%.o: $(SRC_PATH)/%.c*
 	$(CC) $(CCOBJFLAGS) $(DBGFLAGS) -o $@ $<
 
 $(TARGET_DEBUG): $(OBJ_DEBUG)
-	$(CC) $(CCFLAGS) $(DBGFLAGS) $(OBJ_DEBUG) -o $@
+	$(CC) $(CCFLAGS) $(DBGFLAGS) $(OBJ_DEBUG) -o $@ $(LIBS)
 
 # phony rules
 .PHONY: makedir
