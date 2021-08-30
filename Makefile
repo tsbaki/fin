@@ -1,6 +1,6 @@
 # tool macros
 CC := gcc
-CCFLAGS := `xml2-config --cflags --libs` 
+CCFLAGS := -l sqlite3
 DBGFLAGS := -g -Wextra
 CCOBJFLAGS := $(CCFLAGS) -c
 

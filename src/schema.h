@@ -3,17 +3,20 @@
  */
 #ifndef SCHEMA_H
 #define SCHEMA_H
-typedef struct transaction_t
+
+typedef struct 
 {
-    char to[100];
+    int account_id;
     double amount;
+    char ref[100];
+    char timestamp[100];
 } transaction_t;
 
-typedef struct account_t
+typedef struct
 {
+    int id;
     char name[100];
     double balance;
-    transaction_t transactions[100];
 } account_t; 
 
 #endif
