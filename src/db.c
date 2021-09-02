@@ -7,47 +7,47 @@
 #include "schema.h"
 #include "utils.h"
 
-#define MAX_ACCOUNTS 20
-
 sqlite3 *db;
-account_t _accounts[MAX_ACCOUNTS];
-
-int array_counter = 0;
-
-static int load_accounts_cb(void *NotUsed, int argc, char **argv, char **azColName)  
-{
-
-    for(int i=0; i < argc; i++)  
-    {
-      if(strcmp(azColName[i],"name") == 0) 
-          strcpy(_accounts[array_counter].name, argv[i]);
-      if(strcmp(azColName[i],"balance") == 0) 
-          _accounts[array_counter].balance = atof(argv[i]);
-      if(strcmp(azColName[i],"id") == 0)  
-          _accounts[array_counter].id = atol(argv[i]);
-
-    }
-
-    array_counter++;
-
-    return 0;
-}
+account_t *_accounts;
+int arr_size = 0;
 
 void set_db(char *path)
 {
     sqlite3_open(path, &db);
 
-    char *sql;
-    char *errmsg = NULL;
+    char *sql = "SELECT COUNT(*)  FROM account";
+    int rc;
     sqlite3_stmt *stmt;
+    int counter = 0;
+
+    rc = sqlite3_prepare_v2(db, sql, -1, &stmt, NULL);
+
+    if(rc != SQLITE_OK)
+    {
+        printf("error: ", sqlite3_errmsg(db));
+        exit(1);
+    }
+
+    rc = sqlite3_step(stmt);
+
+    if(rc == SQLITE_ROW) 
+        arr_size = sqlite3_column_int(stmt, 0);
+
+    _accounts = (account_t*)malloc(arr_size*sizeof(account_t));
 
     sql = "SELECT id, name, balance FROM account;";
 
-    sqlite3_exec(db, sql, load_accounts_cb, 0, &errmsg);
+    rc = sqlite3_prepare_v2(db, sql, -1, &stmt, NULL);
 
-    if(errmsg != NULL)
-        printf("Error loading accounts:\n%s\n", errmsg);
+    while((rc = sqlite3_step(stmt)) == SQLITE_ROW) 
+    {
+        _accounts[counter].id = sqlite3_column_int(stmt, 0);
+        strcpy(_accounts[counter].name, sqlite3_column_text(stmt,1)); 
+        _accounts[counter].balance = sqlite3_column_double(stmt,2); 
+        counter++;
+    }
 
+    sqlite3_finalize(stmt);
 }
 
 
@@ -93,7 +93,6 @@ void start_empty_db(char *name)
     }
 
     sqlite3_close(db);
-
 }
 
 
@@ -139,29 +138,16 @@ void insert_new_account(account_t *acc)
 
 }
 
+/*
+ * Will print the account the names to the outstream
+ */
 void print_account_names()
 {
-    char *sql;
-    char *errmsg = NULL;
-    sqlite3_stmt *stmt;
-    int rc;
-
-    sql = "SELECT name, balance FROM account;";
-
-    //@@@
-    rc = sqlite3_prepare_v2(db, sql, -1, &stmt, 0);
-
-    while((rc = sqlite3_step(stmt)) == SQLITE_ROW) 
+    for(int i=0; i<arr_size; i++)
     {
-          printf("> %s ", sqlite3_column_text(stmt, 0));
-          printf("($%lf)\n", sqlite3_column_double(stmt, 1));
+        printf("> %s:", _accounts[i].name);
+        printf(" $%lf\n", _accounts[i].balance);
     }
-
-    if (errmsg != NULL)
-        printf("%s\n", errmsg);
-
-    sqlite3_finalize(stmt);
-
 }
 
 /*
@@ -171,7 +157,7 @@ int account_exists(char *acc_name)
 {
     remove_trailing_chars(acc_name);
 
-    for(int i=0; i < MAX_ACCOUNTS; i++) 
+    for(int i=0; i < arr_size; i++) 
         if(strcmp(_accounts[i].name, acc_name)==0)
             return 1;
 
@@ -230,7 +216,7 @@ void register_transaction(char *ref, char *acc_name,
         return;
     }
 
-    for(int i=0; i<MAX_ACCOUNTS; i++) 
+    for(int i=0; i<arr_size; i++) 
     {
         if(strcmp(_accounts[i].name, acc_name) == 0)
         {
@@ -261,7 +247,7 @@ transaction_t* load_transactions_for_account(char *acc_name,
 
     int account_id = -1;
     sqlite3_stmt *stmt;
-    int arr_size= 0;
+    int transactions_array_size = 0;
     size_t counter = 0;
 
     char *sql = "SELECT COUNT(*)  FROM movement WHERE account_id = ?";
@@ -275,7 +261,7 @@ transaction_t* load_transactions_for_account(char *acc_name,
     }
 
     /* Find the associated account id using the name. */
-    for(int i=0; i<MAX_ACCOUNTS; i++) 
+    for(int i=0; i<arr_size; i++) 
     {
         if(strcmp(_accounts[i].name, acc_name) == 0) 
         {
@@ -289,10 +275,10 @@ transaction_t* load_transactions_for_account(char *acc_name,
     rc = sqlite3_step(stmt);
 
     if(rc == SQLITE_ROW) 
-        arr_size = sqlite3_column_int(stmt, 0);
+        transactions_array_size = sqlite3_column_int(stmt, 0);
     
     transaction_t *transactions = 
-        (transaction_t*)malloc(arr_size*sizeof(transaction_t));
+        (transaction_t*)malloc(transactions_array_size*sizeof(transaction_t));
 
     sql = "SELECT * FROM movement WHERE account_id = ?";
 
@@ -308,7 +294,6 @@ transaction_t* load_transactions_for_account(char *acc_name,
 
         const char *timestamp = sqlite3_column_text(stmt, 2);
         const char *ref = sqlite3_column_text(stmt, 3);
-
         strcpy(transactions[counter].timestamp, timestamp);
         strcpy(transactions[counter].ref, ref);
         counter++;
@@ -318,7 +303,7 @@ transaction_t* load_transactions_for_account(char *acc_name,
         printf("error: ", sqlite3_errmsg(db));
 
     sqlite3_finalize(stmt);
-    *size = arr_size;
+    *size = transactions_array_size;
 
     return transactions;
 }

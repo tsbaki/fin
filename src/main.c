@@ -29,7 +29,7 @@ void init()
     {
         printf("Enter 'quit' to quit the program\n");
     }
-    else if(strcmp(co, "list\n") == 0)
+    else if(strcmp(co, "l\n") == 0)
     {
         print_account_names();
     } 
