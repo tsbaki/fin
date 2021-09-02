@@ -1,25 +1,22 @@
+#include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
 #include <stdbool.h>
 #include <unistd.h>
 
-void
-clear_screen()
+void clear_screen()
 {
-    // TODO: Add windows compatibilty
     system("clear");
 }
 
-void 
-print_welcome_msg()
+void print_welcome_msg()
 {
-    //TODO:
     printf("Welcome to fin 0.0.1!\n");
     printf("Type 'help' to list commands...\n");
 }
 
-void 
-print_help()
+
+void print_help()
 {
     printf("\nVersion 0.0.1\n");
     printf("Commands:\n");
@@ -29,20 +26,20 @@ print_help()
     printf("Report bugs to <brasil.a@pm.me>\n\n");
 }
 
-void 
-remove_trailing_chars(char *string)
+
+void remove_trailing_chars(char *string)
 {
-    if(string == NULL)
+    if (string == NULL)
         return;
 
     int last_char = strlen(string) - 1;
 
-    if(string[last_char] == '\n')
+    if (string[last_char] == '\n')
         string[last_char] = '\0';
 }
 
-bool 
-starts_with(const char *pre, const char *str)
+
+bool starts_with(const char *pre, const char *str)
 {
     size_t lenpre = strlen(pre);
     size_t lenstr = strlen(str);
@@ -51,8 +48,8 @@ starts_with(const char *pre, const char *str)
         false : memcmp(pre, str, lenpre) == 0;
 }
 
-bool
-check_file_exists(char *path)
+
+bool check_file_exists(char *path)
 {
     if (access(path, F_OK) != -1)
         return true;

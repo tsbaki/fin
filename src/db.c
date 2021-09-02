@@ -3,7 +3,6 @@
 #include <string.h>
 #include <sqlite3.h>
 #include <time.h>
-#include <assert.h>
 
 #include "schema.h"
 #include "utils.h"
@@ -78,7 +77,8 @@ void start_empty_db(char *name)
              amount	REAL NOT NULL,\
              timestamp	TEXT NOT NULL ,\
              reference	TEXT,\
-             FOREIGN KEY(account_id) REFERENCES account(id) ON DELETE CASCADE);";
+             FOREIGN KEY(account_id) REFERENCES\
+             account(id) ON DELETE CASCADE);";
 
     rc = sqlite3_exec(db, sql, NULL, 0, &error_msg);
 
@@ -110,7 +110,8 @@ void insert_new_account(account_t *acc)
 
     if (rc != SQLITE_OK) 
     {
-        printf("prepare failed: %s\n", sqlite3_errmsg(db));
+        printf("Preparing statement failed: %s\n", 
+                sqlite3_errmsg(db));
         return /* failure */;
     }
 
@@ -128,30 +129,17 @@ void insert_new_account(account_t *acc)
 
     if (rc != SQLITE_DONE) 
     {
-        printf("execution failed: %s\n", sqlite3_errmsg(db));
+        printf("Could not add account:\n \t`%s`\n", 
+                sqlite3_errmsg(db));
         sqlite3_finalize(stmt);
         return /* failure */;
     }
 
     sqlite3_finalize(stmt);
+
 }
 
-static int 
-print_account_names_cb(void *NotUsed, int argc, char **argv, char **azColName)  
-{
-    for(int i=0; i<argc; i++)  
-    {
-      if(strcmp(azColName[i],"name") == 0) 
-          printf("> %s ", argv[i]);
-      if(strcmp(azColName[i],"balance") == 0) 
-          printf("($%s)\n", argv[i]);
-    }
-
-    return 0;
-}
-
-void
-print_account_names()
+void print_account_names()
 {
     char *sql;
     char *errmsg = NULL;
@@ -160,10 +148,20 @@ print_account_names()
 
     sql = "SELECT name, balance FROM account;";
 
-    sqlite3_exec(db, sql, print_account_names_cb, 0, &errmsg);
+    //@@@
+    rc = sqlite3_prepare_v2(db, sql, -1, &stmt, 0);
 
-    if(errmsg != NULL)
+    while((rc = sqlite3_step(stmt)) == SQLITE_ROW) 
+    {
+          printf("> %s ", sqlite3_column_text(stmt, 0));
+          printf("($%lf)\n", sqlite3_column_double(stmt, 1));
+    }
+
+    if (errmsg != NULL)
         printf("%s\n", errmsg);
+
+    sqlite3_finalize(stmt);
+
 }
 
 /*
@@ -214,7 +212,7 @@ void register_transaction(char *ref, char *acc_name,
 
     if (rc != SQLITE_DONE) 
     {
-        printf("execution failed: %s\n", sqlite3_errmsg(db));
+        printf("Error adding transaction:\n \t`%s`\n", sqlite3_errmsg(db));
         sqlite3_finalize(stmt);
         return;
     }
@@ -320,7 +318,6 @@ transaction_t* load_transactions_for_account(char *acc_name,
         printf("error: ", sqlite3_errmsg(db));
 
     sqlite3_finalize(stmt);
-
     *size = arr_size;
 
     return transactions;

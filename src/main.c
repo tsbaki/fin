@@ -6,6 +6,10 @@
 #include "db.h"
 #include "utils.h"
 
+#define ANSI_COLOR_RED     "\x1b[31m"
+#define ANSI_COLOR_GREEN   "\x1b[32m"
+#define ANSI_COLOR_RESET   "\x1b[0m"
+
 char *db_path = "";
 
 void print_account_names();
@@ -21,12 +25,17 @@ void init()
 
     fgets(co, 20, stdin);
 
-    if(strcmp(co, "list\n") == 0)
+    if(co == NULL)
+    {
+        printf("Enter 'quit' to quit the program\n");
+    }
+    else if(strcmp(co, "list\n") == 0)
     {
         print_account_names();
-    }
+    } 
     else if(strcmp(co, "lt\n") == 0)
     {
+
         char account[20];
 
         print_account_names();
@@ -39,7 +48,8 @@ void init()
             size_t arr_size = 0;
 
             transaction_t *transactions = 
-                load_transactions_for_account(account, &arr_size);
+                load_transactions_for_account(account,
+                        &arr_size);
 
             if(arr_size == 0) 
             {
@@ -48,11 +58,28 @@ void init()
             {
                 for(size_t i=0; i < arr_size; i++)
                 {
-                    printf("\n");
-                    printf("[%s]\n", transactions[i].timestamp);
+                    if (i>0)
+                    {
+                        /* Don't print duplicated timestamps */
+                        if (strcmp(transactions[i-1].timestamp,
+                                    transactions[i].timestamp) != 0)
+                            printf("[%s]\n",
+                                   transactions[i].timestamp);
+                    } else
+                    {
+                        printf("[%s]\n", transactions[i].timestamp);
+                    }
+
                     printf("\t%s: ", transactions[i].ref);
-                    printf("%lf\n", transactions[i].amount);
-                
+
+                    if(transactions[i].amount < 0)
+                        printf(ANSI_COLOR_RED "%lf\n"  
+                                ANSI_COLOR_RESET, 
+                                transactions[i].amount);
+                    else
+                        printf(ANSI_COLOR_GREEN "+%lf\n"  
+                                ANSI_COLOR_RESET, 
+                                transactions[i].amount);
                 }
             }
 
@@ -61,8 +88,7 @@ void init()
             printf("`%s` does not exist\n", account);
         }
 
-    }
-    else if(strcmp(co, "add account\n") == 0 || strcmp(co, "aa\n") == 0)
+    } else if(strcmp(co, "add account\n") == 0 || strcmp(co, "aa\n") == 0)
     {
         account_t acc;
 
@@ -83,8 +109,7 @@ void init()
 
         insert_new_account(&acc);
 
-    }
-    else if(strcmp(co, "add transaction\n") == 0
+    } else if(strcmp(co, "add transaction\n") == 0
             || strcmp(co, "at\n") == 0)
     {
         char ref[10];
@@ -111,21 +136,17 @@ void init()
             printf("Account %s does not exist...\n",account);
         }
 
-    }
-    else if(strcmp(co, "help\n") == 0)
+    } else if(strcmp(co, "help\n") == 0)
     {
         print_help();
-    }
-    else if(strcmp(co, "clear\n") == 0)
+    } else if(strcmp(co, "clear\n") == 0)
     {
         clear_screen();
-    }
-    else if(strcmp(co, "quit\n") == 0)
+    } else if(strcmp(co, "quit\n") == 0)
     {
         printf("Bye\n");
         return;
-    }
-    else 
+    } else 
     {
         if(strcmp(co, "\n") != 0) 
         {
