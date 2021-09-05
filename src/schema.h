@@ -17,6 +17,7 @@ typedef struct
     int id;
     char name[100];
     double balance;
+    double goal;
 } account_t; 
 
 #endif

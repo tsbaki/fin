@@ -9,24 +9,34 @@
 
 sqlite3 *db;
 account_t *_accounts;
+char *path_to_db; 
 int arr_size = 0;
 
-void set_db(char *path)
+void load_accounts()
 {
-    sqlite3_open(path, &db);
-
-    char *sql = "SELECT COUNT(*)  FROM account";
     int rc;
+    char *sql = "SELECT COUNT(*)  FROM account";
     sqlite3_stmt *stmt;
     int counter = 0;
+
+    rc = sqlite3_open_v2(
+            path_to_db, 
+            &db, 
+            SQLITE_OPEN_READWRITE,
+            NULL);
+
+    if(rc != SQLITE_OK)
+    {
+        printf("ERROR: ", sqlite3_errmsg(db));
+        
+        /* Should actually quit the program */
+        exit(1);
+    }
 
     rc = sqlite3_prepare_v2(db, sql, -1, &stmt, NULL);
 
     if(rc != SQLITE_OK)
-    {
-        printf("error: ", sqlite3_errmsg(db));
-        exit(1);
-    }
+        printf("ERROR: %s\b", sqlite3_errmsg(db));
 
     rc = sqlite3_step(stmt);
 
@@ -46,13 +56,30 @@ void set_db(char *path)
         _accounts[counter].balance = sqlite3_column_double(stmt,2); 
         counter++;
     }
+    
+    rc = sqlite3_finalize(stmt);
 
-    sqlite3_finalize(stmt);
+    if(rc != SQLITE_OK)
+        printf("ERROR: couldn't finalize statement: \n\t %s\n", sqlite3_errmsg(db));
+
+    rc = sqlite3_close_v2(db);
+
+    if(rc != SQLITE_OK)
+        printf("ERROR: couldn't not close DB: \n\t %s\n", sqlite3_errmsg(db));
+
+}
+
+void set_db(char *path)
+{
+    path_to_db = path;
 }
 
 
 void start_empty_db(char *name)
 {
+
+    printf("Starting new db...\n");
+    
     // Used to store the SQLite error message.
     name = strcat(name, ".db");
     char *error_msg;
@@ -61,8 +88,9 @@ void start_empty_db(char *name)
 
     rc = sqlite3_open(name, &db);
 
-    if(rc) {
-        fprintf(stdout, "Can't open database: %s\n", sqlite3_errmsg(db));
+    if (rc != SQLITE_OK) 
+    {
+        printf("ERROR: %s\n", sqlite3_errmsg(db));
         return;
     }
 
@@ -70,6 +98,7 @@ void start_empty_db(char *name)
              id	INTEGER NOT NULL,\
              name	TEXT NOT NULL,\
              balance	REAL NOT NULL,\
+             goal REAL,\
              PRIMARY KEY(id AUTOINCREMENT)\
              );\
              CREATE TABLE movement (\
@@ -84,15 +113,16 @@ void start_empty_db(char *name)
 
     if(rc != SQLITE_OK)
     {
-        fprintf(stdout, "SQL error: %s\n", error_msg);
+        printf("ERROR: %s\n", error_msg);
         sqlite3_free(error_msg);
     } 
     else 
     {
-        fprintf(stdout, "New db created.\n");
+        printf("Database has been created.");
     }
 
     sqlite3_close(db);
+    
 }
 
 
@@ -102,16 +132,25 @@ void insert_new_account(account_t *acc)
     sqlite3_stmt *stmt;
     int rc;
 
-    sql = "INSERT INTO ACCOUNT(name, balance)" \
-          "VALUES(?, ?);";
-
-    rc = sqlite3_prepare_v2(db, sql, -1, &stmt, 0);
+    rc = sqlite3_open(path_to_db, &db);
 
     if (rc != SQLITE_OK) 
     {
-        printf("Preparing statement failed: %s\n", 
+        printf("ERROR: \n\t%s\n", 
                 sqlite3_errmsg(db));
-        return /* failure */;
+        return;
+    }
+
+    sql = "INSERT INTO ACCOUNT(name, balance, goal)" \
+          "VALUES(?, ?, ?);";
+
+    rc = sqlite3_prepare(db, sql, -1, &stmt, 0);
+
+    if (rc != SQLITE_OK) 
+    {
+        printf("ERROR: %s\n", 
+                sqlite3_errmsg(db));
+        return; 
     }
 
     sqlite3_bind_text(
@@ -123,18 +162,20 @@ void insert_new_account(account_t *acc)
             );
 
     sqlite3_bind_double(stmt, 2, acc->balance);
+    sqlite3_bind_double(stmt, 3, acc->goal);
 
     rc = sqlite3_step(stmt);
 
     if (rc != SQLITE_DONE) 
     {
-        printf("Could not add account:\n \t`%s`\n", 
+        printf("ERROR: Could not add account:\n \t`%s`\n", 
                 sqlite3_errmsg(db));
         sqlite3_finalize(stmt);
         return /* failure */;
     }
 
     sqlite3_finalize(stmt);
+    sqlite3_close(db);
 
 }
 
@@ -143,11 +184,36 @@ void insert_new_account(account_t *acc)
  */
 void print_account_names()
 {
-    for(int i=0; i<arr_size; i++)
+
+    int rc;
+    char *sql = "SELECT * FROM account";
+    sqlite3_stmt *stmt;
+
+    rc = sqlite3_open(path_to_db, &db);
+
+    if(rc != SQLITE_OK)
     {
-        printf("> %s:", _accounts[i].name);
-        printf(" $%lf\n", _accounts[i].balance);
+        printf("ERROR: ", sqlite3_errmsg(db));
+        return;
     }
+
+    rc = sqlite3_prepare_v2(db, sql, -1, &stmt, NULL);
+
+    if(rc != SQLITE_OK)
+    {
+        printf("ERROR: %s\b", sqlite3_errmsg(db));
+        return;
+    }
+
+    while ((rc = sqlite3_step(stmt)) == SQLITE_ROW)
+    {
+        printf("> %s:\n", sqlite3_column_text(stmt, 1));
+        printf(" \t£%0.2f | £%0.2f\n", sqlite3_column_double(stmt, 2)
+                ,sqlite3_column_double(stmt, 3)); 
+    }
+
+    sqlite3_close(db);
+
 }
 
 /*
@@ -156,24 +222,132 @@ void print_account_names()
 int account_exists(char *acc_name)
 {
     remove_trailing_chars(acc_name);
+    
+    sqlite3_stmt *stmt;
 
-    for(int i=0; i < arr_size; i++) 
-        if(strcmp(_accounts[i].name, acc_name)==0)
-            return 1;
+    char *sql;
+    int rc;
+    int exists = 0;
 
-    return 0;
+    rc = sqlite3_open_v2(path_to_db, 
+            &db, 
+            SQLITE_OPEN_READWRITE,
+            NULL);
+
+    sql = "SELECT name FROM account\
+                 WHERE name = ?";
+
+    if(rc != SQLITE_OK)
+    {
+        printf("ERROR: %s\n", sqlite3_errmsg(db));
+        return 0;
+    }
+
+
+    rc = sqlite3_prepare_v2(db, sql, -1, &stmt, 0);
+
+    if(rc != SQLITE_OK)
+    {
+        printf("ERROR: %s\n", sqlite3_errmsg(db));
+        return 0;
+    }
+
+    sqlite3_bind_text(stmt, 1, acc_name, -1, SQLITE_STATIC);
+
+    if(sqlite3_step(stmt) == SQLITE_ROW) 
+        exists = 1;
+
+    sqlite3_finalize(stmt);
+    rc = sqlite3_close(db);
+
+    if(rc != SQLITE_OK)
+    {
+        printf("ERROR: %s\n", sqlite3_errmsg(db));
+        return 0;
+    }
+
+
+    return exists;
+
+}
+
+void update_account_balance(char *acc_name, double amount)
+{
+
+    sqlite3_stmt *stmt;
+    char *sql;
+    int rc;
+    double acc_bal;
+
+    rc = sqlite3_open(path_to_db, &db);
+
+    sql = "SELECT balance FROM account\
+           WHERE name = ?;";
+
+    rc = sqlite3_prepare_v2(db, sql, -1, &stmt, 0);
+
+    sqlite3_bind_text(stmt, 1, acc_name, -1, SQLITE_STATIC);
+
+    if(rc != SQLITE_OK)
+        printf("ERROR: Couldn't open database: \n\t %s\n", sqlite3_errmsg(db));
+
+    rc = sqlite3_step(stmt);
+
+    if(rc == SQLITE_ROW)
+    {
+        acc_bal = sqlite3_column_double(stmt, 0);
+    }
+    else
+    {
+        sqlite3_finalize(stmt);
+        sqlite3_close(db);
+        printf("ERROR: Couldn't get the account balance: Abort...\b");
+        return;
+    }
+        
+    sqlite3_finalize(stmt);
+
+    sql = "UPDATE account\
+           SET balance = ?\
+           WHERE name = ?;";
+
+    rc = sqlite3_prepare_v2(db, sql, -1, &stmt, 0);
+
+    if (rc != SQLITE_OK) 
+    {
+        printf("ERROR: prepare failed: %s\n", sqlite3_errmsg(db));
+        return;
+    }
+
+    sqlite3_bind_double(stmt, 1, acc_bal + amount);
+    sqlite3_bind_text(stmt, 2, acc_name, -1, SQLITE_STATIC);
+
+    rc = sqlite3_step(stmt);
+
+    sqlite3_finalize(stmt);
+    sqlite3_close(db);
+
 }
 
 void register_transaction(char *ref, char *acc_name, 
         double amount)
 {
+
     char *sql;
     sqlite3_stmt *stmt;
     int rc;
-
     char timestamp[20];
     time_t now = time(NULL);
+
     strftime(timestamp, 20, "%d-%m-%Y", localtime(&now));
+
+    rc = sqlite3_open(path_to_db, &db);
+
+    if (rc != SQLITE_OK) 
+    {
+        printf("ERROR: Opening database: %s\n", rc, sqlite3_errmsg(db));
+        return;
+    }
 
     sql = "INSERT INTO movement(account_id,                \
            reference, amount, timestamp)                   \
@@ -182,10 +356,9 @@ void register_transaction(char *ref, char *acc_name,
 
     rc = sqlite3_prepare_v2(db, sql, -1, &stmt, 0);
 
-
     if (rc != SQLITE_OK) 
     {
-        printf("prepare failed: %s\n", sqlite3_errmsg(db));
+        printf("ERROR: preparing statement: %s\n", sqlite3_errmsg(db));
         return;
     }
 
@@ -196,49 +369,10 @@ void register_transaction(char *ref, char *acc_name,
 
     rc = sqlite3_step(stmt);
 
-    if (rc != SQLITE_DONE) 
-    {
-        printf("Error adding transaction:\n \t`%s`\n", sqlite3_errmsg(db));
-        sqlite3_finalize(stmt);
-        return;
-    }
-
-    // Update the account balance
-    sql = "UPDATE account\
-           SET balance = ?\
-           WHERE name = ?;";
-
-    rc = sqlite3_prepare_v2(db, sql, -1, &stmt, 0);
-
-    if (rc != SQLITE_OK) 
-    {
-        printf("prepare failed: %s\n", sqlite3_errmsg(db));
-        return;
-    }
-
-    for(int i=0; i<arr_size; i++) 
-    {
-        if(strcmp(_accounts[i].name, acc_name) == 0)
-        {
-            double new_balance = _accounts[i].balance + amount;
-
-            sqlite3_bind_double(stmt, 1, new_balance);
-            sqlite3_bind_text(stmt, 2, acc_name, -1, 
-                    SQLITE_STATIC);
-        }
-    }
-
-    rc = sqlite3_step(stmt);
-
-    if (rc != SQLITE_DONE) 
-    {
-        printf("execution failed: %s\n", sqlite3_errmsg(db));
-        sqlite3_finalize(stmt);
-        return;
-    }
-
     sqlite3_finalize(stmt);
+    sqlite3_close(db);
 
+    update_account_balance(acc_name, amount);
 }
 
 transaction_t* load_transactions_for_account(char *acc_name, 
@@ -248,43 +382,43 @@ transaction_t* load_transactions_for_account(char *acc_name,
     int account_id = -1;
     sqlite3_stmt *stmt;
     int transactions_array_size = 0;
+    int rc;
     size_t counter = 0;
 
-    char *sql = "SELECT COUNT(*)  FROM movement WHERE account_id = ?";
-
-    int rc = sqlite3_prepare_v2(db, sql, -1, &stmt, NULL);
+    rc = sqlite3_open(path_to_db, &db);
 
     if(rc != SQLITE_OK)
     {
-        printf("error: ", sqlite3_errmsg(db));
+        printf("ERROR: Could not open database: %s\n", sqlite3_errmsg(db));
         return NULL;
     }
 
-    /* Find the associated account id using the name. */
-    for(int i=0; i<arr_size; i++) 
+    char *sql = "SELECT COUNT(*) FROM movement WHERE \
+                 account_id = (SELECT id FROM account \
+                         WHERE name = ?);";
+
+    rc = sqlite3_prepare_v2(db, sql, -1, &stmt, NULL);
+
+    if(rc != SQLITE_OK)
     {
-        if(strcmp(_accounts[i].name, acc_name) == 0) 
-        {
-            account_id = _accounts[i].id;
-            break;
-        }
+        printf("ERROR: %s\n", sqlite3_errmsg(db));
+        return NULL;
     }
+    
+    sqlite3_bind_text(stmt, 1, acc_name, -1, SQLITE_STATIC);
 
-    sqlite3_bind_int(stmt, 1, account_id);
-
-    rc = sqlite3_step(stmt);
-
-    if(rc == SQLITE_ROW) 
+    if((rc = sqlite3_step(stmt)) == SQLITE_ROW) 
         transactions_array_size = sqlite3_column_int(stmt, 0);
     
     transaction_t *transactions = 
         (transaction_t*)malloc(transactions_array_size*sizeof(transaction_t));
 
-    sql = "SELECT * FROM movement WHERE account_id = ?";
+    sql = "SELECT * FROM movement WHERE account_id = \
+           (SELECT id FROM account WHERE name = ?);";
 
     rc = sqlite3_prepare_v2(db, sql, -1, &stmt, NULL);
 
-    sqlite3_bind_int(stmt, 1, account_id);
+    sqlite3_bind_text(stmt, 1, acc_name, -1, SQLITE_STATIC);
 
     while((rc = sqlite3_step(stmt)) == SQLITE_ROW) 
     {
@@ -294,16 +428,21 @@ transaction_t* load_transactions_for_account(char *acc_name,
 
         const char *timestamp = sqlite3_column_text(stmt, 2);
         const char *ref = sqlite3_column_text(stmt, 3);
+
         strcpy(transactions[counter].timestamp, timestamp);
         strcpy(transactions[counter].ref, ref);
+
         counter++;
     }
 
     if(rc != SQLITE_DONE)
-        printf("error: ", sqlite3_errmsg(db));
+        printf("ERROR: %s\n ", sqlite3_errmsg(db));
 
     sqlite3_finalize(stmt);
+    sqlite3_close(db);
     *size = transactions_array_size;
 
     return transactions;
 }
+
+

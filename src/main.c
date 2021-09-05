@@ -12,10 +12,9 @@
 
 char *db_path = "";
 
-void print_account_names();
-
 void init()
 {
+    /* must be called first */
     set_db(db_path);
     
     /* Command entered by the user */
@@ -94,6 +93,7 @@ void init()
 
         char name[20];
         double balance;
+        double goal;
 
         printf("Name: ");
         fgets(name, 20, stdin);
@@ -101,11 +101,16 @@ void init()
         printf("Balance: ");
         scanf("%lf", &balance);
 
+        printf("Goal (The amount you want to save to): ");
+        scanf("%lf", &goal);
+
         remove_trailing_chars(name);
 
         strcpy(acc.name, name);
 
         acc.balance = balance;
+
+        acc.goal = goal;
 
         insert_new_account(&acc);
 
@@ -125,6 +130,9 @@ void init()
         {
             printf("Amount: ");
             scanf("%lf", &amount);
+
+            if(amount == 0)
+                printf("Invalid number.\n");
 
             printf("Reference (e.g Groceries): ");
             scanf("%s", ref);
@@ -171,7 +179,6 @@ main(int argc, char **argv)
     else if(strcmp(argv[1], "-n") == 0) 
     {
         start_empty_db(argv[2]);
-        set_db(argv[2]);
         db_path = argv[2];
     }
     else if(argc > 2) 
