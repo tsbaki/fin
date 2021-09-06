@@ -187,7 +187,7 @@ void print_account_names()
 
     int rc;
     char *sql = "SELECT * FROM account";
-    sqlite3_stmt *stmt;
+   sqlite3_stmt *stmt;
 
     rc = sqlite3_open(path_to_db, &db);
 
@@ -207,9 +207,30 @@ void print_account_names()
 
     while ((rc = sqlite3_step(stmt)) == SQLITE_ROW)
     {
+
+        double balance = sqlite3_column_double(stmt, 2);
+        double goal = sqlite3_column_double(stmt, 3);
+
+        int percentage;
+            
+        if (goal == 0.00)
+            percentage = 0;
+        else
+            percentage = ((int)balance * 100) / (int)goal;
+        
         printf("> %s:\n", sqlite3_column_text(stmt, 1));
-        printf(" \t£%0.2f | £%0.2f\n", sqlite3_column_double(stmt, 2)
-                ,sqlite3_column_double(stmt, 3)); 
+        printf(" \t£%0.2f | £%0.2f\n", balance, goal); 
+
+        printf("\t["); 
+        
+        for (int i=0; i<percentage/10; i++)
+            printf("#"); 
+
+        for (int i=0; i<10-(percentage/10); i++)
+            printf(" "); 
+
+        printf("] %d%\n", percentage); 
+
     }
 
     sqlite3_close(db);
@@ -320,6 +341,9 @@ void update_account_balance(char *acc_name, double amount)
     }
 
     sqlite3_bind_double(stmt, 1, acc_bal + amount);
+
+    printf("New balance is: %0.2f\n", acc_bal + amount);
+
     sqlite3_bind_text(stmt, 2, acc_name, -1, SQLITE_STATIC);
 
     rc = sqlite3_step(stmt);
