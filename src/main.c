@@ -32,6 +32,20 @@ void init()
     {
         print_account_names();
     } 
+    else if(strcmp(co, "da\n") == 0)
+    {
+        char account[20];
+
+        print_account_names();
+
+        printf("Account: ");
+        fgets(account, 20, stdin);
+
+        if(account_exists(account) == 1)
+            delete_account(account);
+        else 
+            printf("Account does not exist.\n");
+    }
     else if(strcmp(co, "lt\n") == 0)
     {
 
@@ -87,19 +101,23 @@ void init()
             printf("`%s` does not exist\n", account);
         }
 
-    } else if(strcmp(co, "add account\n") == 0 || strcmp(co, "aa\n") == 0)
+    } else if(strcmp(co, "add account\n") == 0  || strcmp(co, "aa\n") == 0)
     {
         account_t acc;
 
         char name[20];
+        char line[256];
         double balance;
         double goal;
 
         printf("Name: ");
         fgets(name, 20, stdin);
 
-        printf("Balance: ");
-        scanf("%lf", &balance);
+        printf("Balance (e.g 20.0): ");
+
+        if (fgets(line, sizeof(line), stdin))
+            if (1 != sscanf(line, "%lf", &balance))
+                printf("There was an error processing the value.\n");
 
         printf("Goal (The amount you want to save to): ");
         scanf("%lf", &goal);

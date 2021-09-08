@@ -12,60 +12,21 @@ account_t *_accounts;
 char *path_to_db; 
 int arr_size = 0;
 
-void load_accounts()
+void delete_account(char *acc_name)
 {
+    sqlite3_open(path_to_db, &db);
+
     int rc;
-    char *sql = "SELECT COUNT(*)  FROM account";
+    char *sql = "DELETE FROM account WHERE name = ?";
     sqlite3_stmt *stmt;
-    int counter = 0;
-
-    rc = sqlite3_open_v2(
-            path_to_db, 
-            &db, 
-            SQLITE_OPEN_READWRITE,
-            NULL);
-
-    if(rc != SQLITE_OK)
-    {
-        printf("ERROR: ", sqlite3_errmsg(db));
-        
-        /* Should actually quit the program */
-        exit(1);
-    }
 
     rc = sqlite3_prepare_v2(db, sql, -1, &stmt, NULL);
 
-    if(rc != SQLITE_OK)
-        printf("ERROR: %s\b", sqlite3_errmsg(db));
+    sqlite3_bind_text(stmt, 1, acc_name, -1, SQLITE_STATIC);
+    sqlite3_step(stmt);
 
-    rc = sqlite3_step(stmt);
-
-    if(rc == SQLITE_ROW) 
-        arr_size = sqlite3_column_int(stmt, 0);
-
-    _accounts = (account_t*)malloc(arr_size*sizeof(account_t));
-
-    sql = "SELECT id, name, balance FROM account;";
-
-    rc = sqlite3_prepare_v2(db, sql, -1, &stmt, NULL);
-
-    while((rc = sqlite3_step(stmt)) == SQLITE_ROW) 
-    {
-        _accounts[counter].id = sqlite3_column_int(stmt, 0);
-        strcpy(_accounts[counter].name, sqlite3_column_text(stmt,1)); 
-        _accounts[counter].balance = sqlite3_column_double(stmt,2); 
-        counter++;
-    }
-    
-    rc = sqlite3_finalize(stmt);
-
-    if(rc != SQLITE_OK)
-        printf("ERROR: couldn't finalize statement: \n\t %s\n", sqlite3_errmsg(db));
-
-    rc = sqlite3_close_v2(db);
-
-    if(rc != SQLITE_OK)
-        printf("ERROR: couldn't not close DB: \n\t %s\n", sqlite3_errmsg(db));
+    sqlite3_finalize(stmt);
+    sqlite3_close(db);
 
 }
 
@@ -73,7 +34,6 @@ void set_db(char *path)
 {
     path_to_db = path;
 }
-
 
 void start_empty_db(char *name)
 {
@@ -179,21 +139,18 @@ void insert_new_account(account_t *acc)
 
 }
 
-/*
- * Will print the account the names to the outstream
- */
 void print_account_names()
 {
 
     int rc;
     char *sql = "SELECT * FROM account";
-   sqlite3_stmt *stmt;
+    sqlite3_stmt *stmt;
 
     rc = sqlite3_open(path_to_db, &db);
 
     if(rc != SQLITE_OK)
     {
-        printf("ERROR: ", sqlite3_errmsg(db));
+        printf("ERROR: %s\n", sqlite3_errmsg(db));
         return;
     }
 
@@ -201,7 +158,7 @@ void print_account_names()
 
     if(rc != SQLITE_OK)
     {
-        printf("ERROR: %s\b", sqlite3_errmsg(db));
+        printf("ERROR: %s\n", sqlite3_errmsg(db));
         return;
     }
 
@@ -322,7 +279,7 @@ void update_account_balance(char *acc_name, double amount)
     {
         sqlite3_finalize(stmt);
         sqlite3_close(db);
-        printf("ERROR: Couldn't get the account balance: Abort...\b");
+        printf("ERROR: Couldn't get the account balance: Abort...\n");
         return;
     }
         
