@@ -1,14 +1,16 @@
+#include "db.h"
+
 #include <stdio.h>
 #include <stdlib.h>
+
 #include <string.h>
 #include <sqlite3.h>
 #include <time.h>
 
-#include "schema.h"
 #include "utils.h"
 
 sqlite3 *db;
-account_t *_accounts;
+struct account *_accounts;
 char *path_to_db; 
 int arr_size = 0;
 
@@ -86,7 +88,7 @@ void start_empty_db(char *name)
 }
 
 
-void insert_new_account(account_t *acc)
+void insert_new_account(struct account *acc)
 {
     char *sql;
     sqlite3_stmt *stmt;
@@ -356,7 +358,7 @@ void register_transaction(char *ref, char *acc_name,
     update_account_balance(acc_name, amount);
 }
 
-transaction_t* load_transactions_for_account(char *acc_name, 
+struct transaction* load_transactions_for_account(char *acc_name, 
         size_t *size)
 {
 
@@ -391,8 +393,9 @@ transaction_t* load_transactions_for_account(char *acc_name,
     if((rc = sqlite3_step(stmt)) == SQLITE_ROW) 
         transactions_array_size = sqlite3_column_int(stmt, 0);
     
-    transaction_t *transactions = 
-        (transaction_t*)malloc(transactions_array_size*sizeof(transaction_t));
+    struct transaction* transactions = 
+        (struct transaction*)malloc(transactions_array_size* 
+                sizeof (struct transaction));
 
     sql = "SELECT * FROM movement WHERE account_id = \
            (SELECT id FROM account WHERE name = ?);";

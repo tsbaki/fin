@@ -2,7 +2,6 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "schema.h"
 #include "db.h"
 #include "utils.h"
 
@@ -60,7 +59,7 @@ void init()
         {
             size_t arr_size = 0;
 
-            transaction_t *transactions = 
+            struct transaction *transactions = 
                 load_transactions_for_account(account,
                         &arr_size);
 
@@ -103,7 +102,7 @@ void init()
 
     } else if(strcmp(co, "add account\n") == 0  || strcmp(co, "aa\n") == 0)
     {
-        account_t acc;
+        struct account acc;
 
         char name[20];
         char line[256];
