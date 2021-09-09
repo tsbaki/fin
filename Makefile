@@ -1,6 +1,7 @@
 # tool macros
 CC := gcc
-CCFLAGS := -l sqlite3
+#CCFLAGS := -l sqlite3 `pkg-config --cflags --libs gtk+-4.0`
+CCFLAGS := -l sqlite3 `pkg-config --cflags gtk4` `pkg-config --libs gtk4`
 DBGFLAGS := -g -Wextra
 CCOBJFLAGS := $(CCFLAGS) -c
 

@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <gtk/gtk.h>
 
 #include "db.h"
 #include "utils.h"
@@ -11,8 +12,42 @@
 
 char *db_path = "";
 
-void init()
-{
+static void start_gtk_app (GtkApplication *app, gpointer user_data) {
+
+    GtkWidget *window;
+
+    window = gtk_application_window_new (app);
+    gtk_window_set_title (GTK_WINDOW (window), "Window");
+    gtk_window_set_default_size (GTK_WINDOW (window), 200, 200);
+    gtk_widget_show (window);
+
+}
+
+int init_gui(int argc, char **argv) {
+
+    // Create the app object
+    GtkApplication *app;
+    
+    // Exit status 
+    int status;
+
+    app = gtk_application_new ("org.tsbaki.fin", 
+            G_APPLICATION_FLAGS_NONE);
+
+    g_signal_connect (app, "activate", 
+            G_CALLBACK (start_gtk_app), 
+            NULL);
+
+    status = g_application_run (G_APPLICATION (app), argc, argv);
+
+    g_object_unref (app);
+
+
+    return status;
+}
+
+void init_console_app() {
+
     /* must be called first */
     set_db(db_path);
     
@@ -23,16 +58,11 @@ void init()
 
     fgets(co, 20, stdin);
 
-    if(co == NULL)
-    {
+    if(co == NULL) {
         printf("Enter 'quit' to quit the program\n");
-    }
-    else if(strcmp(co, "l\n") == 0)
-    {
+    } else if(strcmp(co, "l\n") == 0) {
         print_account_names();
-    } 
-    else if(strcmp(co, "da\n") == 0)
-    {
+    } else if(strcmp(co, "da\n") == 0) {
         char account[20];
 
         print_account_names();
@@ -44,9 +74,8 @@ void init()
             delete_account(account);
         else 
             printf("Account does not exist.\n");
-    }
-    else if(strcmp(co, "lt\n") == 0)
-    {
+
+    } else if(strcmp(co, "lt\n") == 0) {
 
         char account[20];
 
@@ -55,30 +84,25 @@ void init()
         printf("Account: ");
         fgets(account, 20, stdin);
 
-        if(account_exists(account) == 1)
-        {
+        if(account_exists(account) == 1) {
             size_t arr_size = 0;
 
             struct transaction *transactions = 
                 load_transactions_for_account(account,
                         &arr_size);
 
-            if(arr_size == 0) 
-            {
+            if(arr_size == 0) {
                 printf("No transactions to show yet\n");
-            } else 
-            {
-                for(size_t i=0; i < arr_size; i++)
-                {
-                    if (i>0)
-                    {
+            } else {
+
+                for(size_t i=0; i < arr_size; i++) {
+                    if (i>0) {
                         /* Don't print duplicated timestamps */
                         if (strcmp(transactions[i-1].timestamp,
                                     transactions[i].timestamp) != 0)
                             printf("[%s]\n",
                                    transactions[i].timestamp);
-                    } else
-                    {
+                    } else {
                         printf("[%s]\n", transactions[i].timestamp);
                     }
 
@@ -95,13 +119,13 @@ void init()
                 }
             }
 
-        } else
-        {
+        } else {
             printf("`%s` does not exist\n", account);
         }
 
-    } else if(strcmp(co, "add account\n") == 0  || strcmp(co, "aa\n") == 0)
-    {
+    } else if(strcmp(co, "add account\n") == 0  ||
+           strcmp(co, "aa\n") == 0) {
+        
         struct account acc;
 
         char name[20];
@@ -132,8 +156,7 @@ void init()
         insert_new_account(&acc);
 
     } else if(strcmp(co, "add transaction\n") == 0
-            || strcmp(co, "at\n") == 0)
-    {
+            || strcmp(co, "at\n") == 0) {
         char ref[10];
         char account[50];
         double amount;
@@ -143,8 +166,7 @@ void init()
         printf("Account: " );
         scanf("%s", account);
 
-        if(account_exists(account) == 1)
-        {
+        if(account_exists(account) == 1) {
             printf("Amount: ");
             scanf("%lf", &amount);
 
@@ -156,67 +178,51 @@ void init()
 
             register_transaction(ref, account, amount);
         }
-        else
-        {
+        else {
             printf("Account %s does not exist...\n",account);
         }
 
-    } else if(strcmp(co, "help\n") == 0)
-    {
+    } else if(strcmp(co, "help\n") == 0) {
         print_help();
-    } else if(strcmp(co, "clear\n") == 0)
-    {
+    } else if(strcmp(co, "clear\n") == 0) {
         clear_screen();
-    } else if(strcmp(co, "quit\n") == 0)
-    {
+    } else if(strcmp(co, "quit\n") == 0) {
         printf("Bye\n");
         return;
-    } else 
-    {
-        if(strcmp(co, "\n") != 0) 
-        {
+    } else {
+        
+        if(strcmp(co, "\n") != 0) {
             printf("\nUnknown options: %s\n", co);
             printf("Type 'help' to list commands\n\n", co);
         }
     }
 
-    init();
+    init_console_app();
 }
 
-int 
-main(int argc, char **argv)
-{
+int main(int argc, char **argv) {
+/* 
+ * By default this should start the gui application.
+ */
 
-    if(argc == 1)
-    {
-        printf("ERROR: Provide path to file.\n");
-        printf("Use -n <name> to start with new db.\n");
-        return 1;
-    }
-    else if(strcmp(argv[1], "-n") == 0) 
-    {
-        start_empty_db(argv[2]);
-        db_path = argv[2];
-    }
-    else if(argc > 2) 
-    {
-        printf("ERROR: Too many arguments.\n");
-        return 1;
-    }
+    if (argc == 1)
+        return init_gui(argc, argv);
 
-    if(strcmp(db_path, "") == 0)
-        db_path = argv[1];
-
-    if(check_file_exists(db_path))
-    {
-        print_welcome_msg();
-        init();
-    }
-    else 
-    {
-        printf("ERROR: '%s' does not exist.\n", db_path);
-        return 1;
-    }
+    if (strcmp(argv[1], "--console") == 0) {
+        if (strcmp(argv[2], "-n") == 0) {
+            start_empty_db(argv[3]);
+            db_path = argv[3];
+        } else {
+            db_path = argv[2];
+            if (check_file_exists(db_path)) {
+                print_welcome_msg();
+                init_console_app();
+            } else {
+                printf ("ERROR: '%s' does not exist.\n", db_path);
+                return 1;
+            }
+        }
+    } 
 
     return 0;
 }
