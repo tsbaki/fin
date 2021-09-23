@@ -18,9 +18,11 @@ void set_db(char *path_to_file);
 
 void insert_new_account(struct account *acc);
 
-void register_transaction(char *ref, char *acc_name, double amount);
+void register_transaction(char *ref, 
+    char *acc_name, double amount);
 
-struct transaction* load_transactions_for_account(char *acc_name, size_t *size);
+struct transaction* load_transactions_for_account(char 
+    *acc_name, size_t *size);
 
 int account_exists(char *acc_name);
 
