@@ -11,8 +11,3 @@ Make sure you have `libsqlite3-dev` installed.
 ```
 make 
 ```
-
-### Debug mode
-```
-make debug && ./debug/fin <path_to_db>
-```
