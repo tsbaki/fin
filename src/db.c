@@ -1,12 +1,10 @@
-#include "db.h"
-
 #include <stdio.h>
 #include <stdlib.h>
-
 #include <string.h>
 #include <sqlite3.h>
 #include <time.h>
 
+#include "db.h"
 #include "utils.h"
 
 sqlite3 *db;
@@ -14,8 +12,7 @@ struct account *_accounts;
 char *path_to_db; 
 int arr_size = 0;
 
-void delete_account(char *acc_name)
-{
+void delete_account(char *acc_name) {
     sqlite3_open(path_to_db, &db);
 
     int rc;
@@ -32,13 +29,11 @@ void delete_account(char *acc_name)
 
 }
 
-void set_db(char *path)
-{
+void set_db(char *path) {
     path_to_db = path;
 }
 
-void start_empty_db(char *name)
-{
+void start_empty_db(char *name) {
 
     printf("Starting new db...\n");
     
@@ -88,8 +83,7 @@ void start_empty_db(char *name)
 }
 
 
-void insert_new_account(struct account *acc)
-{
+void insert_new_account(struct account *acc) {
     char *sql;
     sqlite3_stmt *stmt;
     int rc;
@@ -158,14 +152,12 @@ void print_account_names()
 
     rc = sqlite3_prepare_v2(db, sql, -1, &stmt, NULL);
 
-    if(rc != SQLITE_OK)
-    {
+    if(rc != SQLITE_OK) {
         printf("ERROR: %s\n", sqlite3_errmsg(db));
         return;
     }
 
-    while ((rc = sqlite3_step(stmt)) == SQLITE_ROW)
-    {
+    while ((rc = sqlite3_step(stmt)) == SQLITE_ROW) {
 
         double balance = sqlite3_column_double(stmt, 2);
         double goal = sqlite3_column_double(stmt, 3);
@@ -199,8 +191,7 @@ void print_account_names()
 /*
  * Returns 1 if account exists
  */
-int account_exists(char *acc_name)
-{
+int account_exists(char *acc_name) {
     remove_trailing_chars(acc_name);
     
     sqlite3_stmt *stmt;
@@ -217,8 +208,7 @@ int account_exists(char *acc_name)
     sql = "SELECT name FROM account\
                  WHERE name = ?";
 
-    if(rc != SQLITE_OK)
-    {
+    if(rc != SQLITE_OK) {
         printf("ERROR: %s\n", sqlite3_errmsg(db));
         return 0;
     }
@@ -226,22 +216,19 @@ int account_exists(char *acc_name)
 
     rc = sqlite3_prepare_v2(db, sql, -1, &stmt, 0);
 
-    if(rc != SQLITE_OK)
-    {
+    if(rc != SQLITE_OK) {
         printf("ERROR: %s\n", sqlite3_errmsg(db));
         return 0;
     }
 
     sqlite3_bind_text(stmt, 1, acc_name, -1, SQLITE_STATIC);
 
-    if(sqlite3_step(stmt) == SQLITE_ROW) 
-        exists = 1;
+    if(sqlite3_step(stmt) == SQLITE_ROW) exists = 1;
 
     sqlite3_finalize(stmt);
     rc = sqlite3_close(db);
 
-    if(rc != SQLITE_OK)
-    {
+    if(rc != SQLITE_OK) {
         printf("ERROR: %s\n", sqlite3_errmsg(db));
         return 0;
     }
@@ -251,8 +238,7 @@ int account_exists(char *acc_name)
 
 }
 
-void update_account_balance(char *acc_name, double amount)
-{
+void update_account_balance(char *acc_name, double amount) {
 
     sqlite3_stmt *stmt;
     char *sql;
@@ -273,12 +259,9 @@ void update_account_balance(char *acc_name, double amount)
 
     rc = sqlite3_step(stmt);
 
-    if(rc == SQLITE_ROW)
-    {
+    if(rc == SQLITE_ROW) {
         acc_bal = sqlite3_column_double(stmt, 0);
-    }
-    else
-    {
+    } else {
         sqlite3_finalize(stmt);
         sqlite3_close(db);
         printf("ERROR: Couldn't get the account balance: Abort...\n");
@@ -293,8 +276,7 @@ void update_account_balance(char *acc_name, double amount)
 
     rc = sqlite3_prepare_v2(db, sql, -1, &stmt, 0);
 
-    if (rc != SQLITE_OK) 
-    {
+    if (rc != SQLITE_OK) {
         printf("ERROR: prepare failed: %s\n", sqlite3_errmsg(db));
         return;
     }

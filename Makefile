@@ -1,7 +1,7 @@
 CC := cc
 
 PKG_CONFIG := `pkg-config --cflags gtk4` `pkg-config --libs gtk4`
-CCFLAGS := -l sqlite3 $(PKG_CONFIG)
+CCFLAGS := -l sqlite3 
 DBFLAGS := -g -Wextra
 
 SRC_PATH := src/**.c

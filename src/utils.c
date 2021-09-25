@@ -18,11 +18,13 @@ void print_welcome_msg()
 
 void print_help()
 {
-    printf("\nVersion 0.0.1\n");
-    printf("Commands:\n");
+    printf("USAGE\n");
+    printf("\tfin [options] [file]\n");
+    printf("COMMANDS\n");
     printf("\t- list [la/lt] [accounts/transactions]    List the accounts in this db.\n");
     printf("\t- add [accounttransaction]                Add a transaction/account\n");
-    printf("\nAuthor: Andre Brasil\n");
+    printf("\nVersion 0.0.1\n");
+    printf("Author: Andre Brasil\n");
     printf("Report bugs to <brasil.a@pm.me>\n\n");
 }
 
